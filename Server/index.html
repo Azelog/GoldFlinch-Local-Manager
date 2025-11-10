@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>HomeTV - Lista de deseados</title>
+  <style>
+    body { font-family: Arial, Helvetica, sans-serif; margin: 12px; background:#f6f7f8; color:#222; }
+    .container { max-width:900px; margin:0 auto; }
+    h1 { font-size:1.4rem; }
+    .row { display:flex; gap:8px; margin-bottom:8px; }
+    input[type=text] { flex:1; padding:8px; font-size:1rem; }
+    button { padding:6px 10px; font-size:0.9rem; cursor:pointer; }
+    .results { margin-top:12px; }
+    .card { background:#fff; border-radius:6px; padding:10px; margin-bottom:8px; box-shadow:0 1px 3px rgba(0,0,0,0.08); }
+    .card-header { display:flex; justify-content:space-between; align-items:center; }
+    .meta { font-size:0.9rem; color:#444; }
+    .small { font-size:0.8rem; color:#666; }
+    .desc { display:none; font-size:0.9rem; margin-top:8px; border-top:1px solid #ddd; padding-top:6px; color:#333; }
+    .status { margin-top:10px; color:green; }
+    .error { color:#c0392b; }
+    select { padding:6px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>HomeTV — Añadir a la lista de deseados</h1>
+
+    <div class="row">
+      <input id="q" type="text" placeholder="Busca serie o película (ej: ironman)" />
+      <select id="kind">
+        <option value="series">Series (TV)</option>
+        <option value="movies">Películas (TV)</option>
+      </select>
+      <button id="search">Buscar</button>
+    </div>
+
+    <div id="msg" class="small"></div>
+
+    <div class="results" id="results"></div>
+
+    <div class="status" id="status"></div>
+  </div>
+
+<script>
+const qIn = document.getElementById('q');
+const searchBtn = document.getElementById('search');
+const resultsDiv = document.getElementById('results');
+const status = document.getElementById('status');
+const msg = document.getElementById('msg');
+
+function clearResults(){ resultsDiv.innerHTML = ''; status.textContent = ''; }
+
+async function tvmazeSearch(query){
+  const url = 'https://api.tvmaze.com/search/shows?q=' + encodeURIComponent(query);
+  const resp = await fetch(url);
+  if(!resp.ok) throw new Error('Error buscando en TVmaze');
+  return resp.json();
+}
+
+function sanitize(html) {
+  const div = document.createElement('div');
+  div.innerHTML = html;
+  return div.textContent || div.innerText || '';
+}
+
+function renderResults(items, kind){
+  clearResults();
+  if(!items || items.length===0){
+    resultsDiv.innerHTML = '<div class="small">No se encontraron resultados.</div>';
+    return;
+  }
+  items.forEach(it => {
+    const show = it.show || it;
+    const name = show.name || 'Desconocido';
+    const url = show.url || '';
+    const imdb = (show.externals && show.externals.imdb) ? show.externals.imdb : 'NOIMDB';
+    const summary = sanitize(show.summary || 'Sin descripción disponible.');
+    const premiered = show.premiered ? ('(' + show.premiered.split('-')[0] + ') ') : '';
+    const type = show.type || '';
+
+    // Crear tarjeta
+    const card = document.createElement('div');
+    card.className = 'card';
+
+    // Cabecera con nombre y botones
+    const header = document.createElement('div');
+    header.className = 'card-header';
+
+    const left = document.createElement('div');
+    left.innerHTML = `<div><strong>${name}</strong></div><div class="meta">${premiered}${type}</div><div class="small">${url}</div>`;
+
+    const right = document.createElement('div');
+    const addBtn = document.createElement('button');
+    addBtn.textContent = 'Añadir';
+    addBtn.onclick = () => saveSelection(name, imdb, kind);
+    const descBtn = document.createElement('button');
+    descBtn.textContent = 'Ver descripción';
+    descBtn.onclick = () => toggleDesc(card);
+
+    right.appendChild(descBtn);
+    right.appendChild(addBtn);
+
+    header.appendChild(left);
+    header.appendChild(right);
+    card.appendChild(header);
+
+    // Descripción oculta
+    const desc = document.createElement('div');
+    desc.className = 'desc';
+    desc.textContent = summary;
+    card.appendChild(desc);
+
+    resultsDiv.appendChild(card);
+  });
+}
+
+function toggleDesc(card){
+  const desc = card.querySelector('.desc');
+  desc.style.display = (desc.style.display === 'none' || desc.style.display === '') ? 'block' : 'none';
+}
+
+async function saveSelection(name, imdb, kind){
+  status.textContent = 'Guardando...';
+  const typeLabel = (kind === 'series') ? 'Series' : 'Movies';
+  const line = `${name} - ${imdb} - ${typeLabel}`;
+
+  try{
+    const resp = await fetch('/save', {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json' },
+      body: JSON.stringify({ line })
+    });
+    if(!resp.ok){
+      const txt = await resp.text();
+      throw new Error(txt || 'Error guardando');
+    }
+    status.textContent = `✔️ Guardado: ${line}`;
+  }catch(err){
+    status.textContent = '';
+    msg.className = 'error';
+    msg.textContent = 'Error: ' + err.message;
+  }
+}
+
+searchBtn.addEventListener('click', async () => {
+  const q = qIn.value.trim();
+  if(!q){ msg.textContent = 'Introduce un término de búsqueda'; return; }
+  msg.textContent = '';
+  clearResults();
+  status.textContent = 'Buscando en TVmaze...';
+  try {
+    const results = await tvmazeSearch(q);
+    const kind = document.getElementById('kind').value;
+    renderResults(results, kind);
+    status.textContent = '';
+  } catch(e){
+    status.textContent = '';
+    msg.className = 'error';
+    msg.textContent = 'Error buscando: ' + e.message;
+  }
+});
+</script>
+</body>
+</html>
