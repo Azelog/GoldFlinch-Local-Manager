@@ -95,7 +95,22 @@ def extraer_se_temp(nombre_archivo):
             return match.group(1).zfill(2), match.group(2).zfill(2)
     return None, None
 
+def prepareSubstitution(pathOrigin,newName):
+    line = f"{pathOrigin} => newName\n"
+    open("prepared_substitution.txt","w").write(line)
+
 def renombrar_archivos(carpeta, serie_id, nombre_serie, estructura, episodios_online=None):
+    carpetas = [f for f in os.listdir(carpeta) if os.isdir(carpeta)]
+    for i in carpetas:
+        if os.isdir(i):
+            data = i.split(" - ")
+            season = data[1]
+            for j in os.walk(f'{pathSeries}/{i}'):
+                if f.endswith(('.mp4', '.mkv')):
+                    prepareSubstitution(f'{pathSeries}/{i}/j',f'{season} j')
+        else:
+            episodeCode = detectEpisodeCode(i)
+            prepareSubstitution(f'{pathSeries}/i',createEpisodeName(SeriesID,episodeCode))
     archivos = [f for f in os.listdir(carpeta) if f.endswith(('.mp4', '.mkv'))]
     for archivo in archivos:
         temporada, episodio = extraer_se_temp(archivo)
