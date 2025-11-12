@@ -1,0 +1,11 @@
+<addon id="script.remote.touchpadqr" version="0.1.0" name="Remote Touchpad QR" provider-name="azelog">
+    <requires>
+        <import addon="xbmc.python" version="3.0.0"/>
+    </requires>
+    <extension point="xbmc.python.script" library="default.py"/>
+    <extension point="xbmc.addon.metadata">
+        <summary>Mostrar QR de Remote Touchpad en Kodi</summary>
+        <description>Muestra un QR en pantalla para controlar Kodi con el móvil.</description>
+        <platform>all</platform>
+    </extension>
+</addon>
