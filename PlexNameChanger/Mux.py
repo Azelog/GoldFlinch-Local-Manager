@@ -71,26 +71,26 @@ def create_custom_video(video1, video2, selection, output):
         {"file": 2, "type": "subtitle", "id": 0}
     ]
     """
-    streams = {}
+    streams = []
     videos = selection["video"]
     for video in videos:
-        streams = streams + {video["from"]:video["index"]}
+        streams = streams + [video["from"],video["index"]]
 
     audios = selection["audio"]
     for audio in audios:
-        streams = streams + {audio["from"]:audio["index"]}
+        streams = streams + [audio["from"]:audio["index"]]
 
     subs = selection["subtittles"]
     for sub in subs:
-        streams = streams + {sub["from"]:sub["index"]}
+        streams = streams + [sub["from"]:sub["index"]]
 
     cmd = ["ffmpeg"]
 
-    for i in range(len(list(streams)):
-        cmd += ["-i", streams[i]]
+    for i in range(len(streams):
+        cmd += ["-i", streams[i][0]]
+    for i in range(len(streams):
+        cmd += ["-map", f"{i}:{streams[i][1]['index']}"]
 
-    for i in range(len(list(streams.values())))
-        cmd += ["-map", f"{i}:{streams[i]['index']}"]
 
     # Sin reconvertir, copia directa
     cmd += ["-c", "copy", output]
